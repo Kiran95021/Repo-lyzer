@@ -1,4 +1,4 @@
-# 🚀 Repo-lyzer
+# Repo-lyzer
 
 **Repo-lyzer** is a modern, terminal-based CLI tool written in **Golang** that analyzes GitHub repositories and presents insights in a beautifully formatted, interactive dashboard. It is designed for developers, recruiters, and open-source enthusiasts to quickly evaluate a repository’s health, activity, and contributor statistics.
 
