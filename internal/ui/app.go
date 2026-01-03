@@ -122,7 +122,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.compareStep = 0
 			m.compareInput1 = ""
 			m.compareInput2 = ""
-			m.err = nil
 			m.menu.Done = false
 		} else if m.menu.SelectedOption == 2 && m.menu.Done { // Exit
 			return m, tea.Quit
@@ -190,22 +189,16 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner, cmd = m.spinner.Update(msg)
 		cmds = append(cmds, cmd)
 
-		switch msg := msg.(type) {
-		case CompareResult:
-			m.compareResult = &msg
+		if result, ok := msg.(CompareResult); ok {
+			m.compareResult = &result
 			m.state = stateCompareResult
-			m.err = nil
-		case error:
-			m.err = msg
+			m.progress = nil
+		}
+		if err, ok := msg.(error); ok {
+			m.err = err
 			m.state = stateCompareInput
 			m.compareStep = 0
-		case tea.KeyMsg:
-			if msg.String() == "esc" {
-				m.state = stateMenu
-				m.compareInput1 = ""
-				m.compareInput2 = ""
-				m.err = nil
-			}
+			m.progress = nil
 		}
 
 	case stateCompareResult:
@@ -302,18 +295,6 @@ func (m MainModel) View() string {
 			lipgloss.Center, lipgloss.Center,
 			statusView,
 		)
-	case stateCompareLoading:
-		loadMsg := fmt.Sprintf("📊 Comparing %s vs %s", m.compareInput1, m.compareInput2)
-		statusView := fmt.Sprintf("%s %s...", m.spinner.View(), loadMsg)
-		statusView += "\n\n" + SubtleStyle.Render("Press ESC to cancel")
-
-		return lipgloss.Place(
-			m.windowWidth, m.windowHeight,
-			lipgloss.Center, lipgloss.Center,
-			statusView,
-		)
-	case stateCompareResult:
-		return m.compareResultView()
 	case stateTree:
 		return m.tree.View()
 	case stateDashboard:
