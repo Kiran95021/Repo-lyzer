@@ -347,6 +347,18 @@ func (m MainModel) View() string {
 			lipgloss.Center, lipgloss.Center,
 			statusView,
 		)
+	case stateCompareLoading:
+		loadMsg := fmt.Sprintf("📊 Comparing %s vs %s", m.compareInput1, m.compareInput2)
+		statusView := fmt.Sprintf("%s %s...", m.spinner.View(), loadMsg)
+		statusView += "\n\n" + SubtleStyle.Render("Press ESC to cancel")
+
+		return lipgloss.Place(
+			m.windowWidth, m.windowHeight,
+			lipgloss.Center, lipgloss.Center,
+			statusView,
+		)
+	case stateCompareResult:
+		return m.compareResultView()
 	case stateTree:
 		return m.tree.View()
 	case stateDashboard:
