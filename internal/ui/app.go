@@ -79,6 +79,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settings.Update(msg)
 		m.help.Update(msg)
 		m.history.Update(msg)
+		newTree, _ := m.tree.Update(msg)
+		m.tree = newTree.(TreeModel)
 
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
@@ -95,6 +97,12 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Update tree with current analysis data
 			if m.dashboard.data.Repo != nil {
 				m.tree = NewTreeModel(&m.dashboard.data)
+				// Initialize tree with current window size
+				var cmd tea.Cmd
+				var tm tea.Model
+				tm, cmd = m.tree.Update(tea.WindowSizeMsg{Width: m.windowWidth, Height: m.windowHeight})
+				m.tree = tm.(TreeModel)
+				cmds = append(cmds, cmd)
 			}
 		}
 	}
@@ -119,6 +127,28 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case stateInput:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEnter:
+				if m.input != "" {
+					m.state = stateLoading
+					cmds = append(cmds, m.analyzeRepo(m.input))
+				}
+			case tea.KeyBackspace:
+				if len(m.input) > 0 {
+					m.input = m.input[:len(m.input)-1]
+				}
+			case tea.KeyRunes:
+				m.input += string(msg.Runes)
+			case tea.KeyEsc:
+				m.state = stateMenu
+				m.menu.Done = false
+				m.input = ""
+			}
+		}
+
+	case stateCompareInput:
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			switch msg.Type {

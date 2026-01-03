@@ -167,9 +167,29 @@ func (m DashboardModel) View() string {
 	chart := RenderCommitActivity(activityData, 10) // Show last 10 days
 	chartBox := BoxStyle.Render(chart)
 
+	// Languages
+	langs := "Languages:\n"
+	for l, b := range m.data.Languages {
+		langs += fmt.Sprintf("• %s (%d bytes)\n", l, b)
+	}
+	langBox := BoxStyle.Render(langs)
+
+	// Top Contributors
+	contribs := "Top Contributors:\n"
+	limit := 5
+	if len(m.data.Contributors) < 5 {
+		limit = len(m.data.Contributors)
+	}
+	for i := 0; i < limit; i++ {
+		c := m.data.Contributors[i]
+		contribs += fmt.Sprintf("• %s (%d)\n", c.Login, c.Contributions)
+	}
+	contribBox := BoxStyle.Render(contribs)
+
 	// Layout
-	content := lipgloss.JoinHorizontal(lipgloss.Top, metricsBox, chartBox)
-	content = lipgloss.JoinVertical(lipgloss.Left, header, SubtleStyle.Render(repoInfo), content)
+	row1 := lipgloss.JoinHorizontal(lipgloss.Top, metricsBox, chartBox)
+	row2 := lipgloss.JoinHorizontal(lipgloss.Top, langBox, contribBox)
+	content := lipgloss.JoinVertical(lipgloss.Left, header, SubtleStyle.Render(repoInfo), row1, row2)
 
 	if m.exportMenuVisible {
 		exportMenu := "📥 EXPORT OPTIONS:\n\n"

@@ -210,6 +210,25 @@ func BuildFileTree(result AnalysisResult) *FileNode {
 		})
 	}
 
+	// Add files based on actual languages detected
+	for lang := range result.Languages {
+		ext := ".txt"
+		switch lang {
+		case "Go": ext = ".go"
+		case "Python": ext = ".py"
+		case "JavaScript": ext = ".js"
+		case "TypeScript": ext = ".ts"
+		case "Rust": ext = ".rs"
+		case "Java": ext = ".java"
+		}
+		root.Children = append(root.Children, &FileNode{
+			Name: "main" + ext,
+			Type: "file",
+			Path: "/src/main" + ext,
+			Size: 2048,
+		})
+	}
+
 	// Add common files in root
 	sampleFiles := []string{"README.md", "LICENSE", "go.mod", "go.sum", ".gitignore", "Makefile", "Dockerfile"}
 	for _, file := range sampleFiles {
