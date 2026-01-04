@@ -62,7 +62,8 @@ func openFileManager(filePath string) error {
 	switch runtime.GOOS {
 	case "windows":
 		// Windows: use explorer with /select to highlight the file
-		cmd = exec.Command("explorer", "/select,", filePath)
+		// Path must be concatenated with /select, flag (no space)
+		cmd = exec.Command("explorer", "/select,"+filePath)
 	case "darwin":
 		// macOS: use open with -R to reveal in Finder
 		cmd = exec.Command("open", "-R", filePath)
@@ -143,8 +144,8 @@ func ExportJSON(data AnalysisResult, _ string) (string, error) {
 		return "", err
 	}
 
-	// Open file manager
-	openFileManager(filename)
+	// Open file manager (ignore error - export succeeded even if reveal fails)
+	_ = openFileManager(filename)
 
 	return filename, nil
 }
@@ -206,8 +207,8 @@ func ExportMarkdown(data AnalysisResult, _ string) (string, error) {
 		return "", err
 	}
 
-	// Open file manager
-	openFileManager(filename)
+	// Open file manager (ignore error - export succeeded even if reveal fails)
+	_ = openFileManager(filename)
 
 	return filename, nil
 }
@@ -301,8 +302,8 @@ func ExportCompareJSON(data CompareResult) (string, error) {
 		return "", err
 	}
 
-	// Open file manager
-	openFileManager(filename)
+	// Open file manager (ignore error - export succeeded even if reveal fails)
+	_ = openFileManager(filename)
 
 	return filename, nil
 }
@@ -355,8 +356,8 @@ func ExportCompareMarkdown(data CompareResult) (string, error) {
 		return "", err
 	}
 
-	// Open file manager
-	openFileManager(filename)
+	// Open file manager (ignore error - export succeeded even if reveal fails)
+	_ = openFileManager(filename)
 
 	return filename, nil
 }

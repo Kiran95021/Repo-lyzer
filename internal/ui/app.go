@@ -102,7 +102,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case string:
 		if msg == "switch_to_tree" {
-			m.state = stateFileTree
+			m.state = stateTree
 			// Update tree with current analysis data
 			if m.dashboard.data.Repo != nil {
 				m.tree = NewTreeModel(&m.dashboard.data)
@@ -465,8 +465,6 @@ func (m MainModel) View() string {
 		return m.tree.View()
 	case stateDashboard:
 		return m.dashboard.View()
-	case stateFileTree:
-		return m.tree.View()
 	}
 	return ""
 }
