@@ -14,3 +14,18 @@ type AnalysisResult struct {
 	MaturityScore int
 	MaturityLevel string
 }
+
+type UIState int
+
+const (
+	StateLoading UIState = iota
+	StateReady
+	StateEmpty
+	StateError
+)
+
+type UIMessage struct {
+	Title       string
+	Description string
+	Retryable   bool
+}

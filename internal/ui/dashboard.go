@@ -45,7 +45,6 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.statusMsg = msg.msg
 		}
-		// Clear status after 3 seconds
 		return m, tea.Tick(3*time.Second, func(t time.Time) tea.Msg { return "clear_status" })
 
 	case string:
@@ -83,14 +82,24 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m DashboardModel) View() string {
-	if m.data.Repo == nil {
-		return "No data"
+
+	// ❌ Error state
+	if m.data.Repo == nil && m.statusMsg != "" {
+		return errorStateView(m.statusMsg)
+	}
+
+	// 📭 Empty state
+	if m.data.Repo == nil ||
+		(len(m.data.Commits) == 0 &&
+			len(m.data.Contributors) == 0 &&
+			len(m.data.Languages) == 0) {
+		return emptyStateView()
 	}
 
 	// Header
 	header := TitleStyle.Render(fmt.Sprintf("Analysis for %s", m.data.Repo.FullName))
 
-	// Metrics Column
+	// Metrics
 	metrics := fmt.Sprintf(
 		"Health Score: %d\nBus Factor: %d (%s)\nMaturity: %s (%d)",
 		m.data.HealthScore,
@@ -101,10 +110,10 @@ func (m DashboardModel) View() string {
 
 	// Charts
 	activityData := analyzer.CommitsPerDay(m.data.Commits)
-	chart := RenderCommitActivity(activityData, 10) // Show last 10 days
+	chart := RenderCommitActivity(activityData, 10)
 	chartBox := BoxStyle.Render(chart)
 
-	// File Tree (Simplified)
+	// File Tree
 	treeContent := "📂 Files (Top 10):\n"
 	limit := 10
 	if len(m.data.FileTree) < limit {
@@ -132,7 +141,11 @@ func (m DashboardModel) View() string {
 	}
 
 	if m.statusMsg != "" {
-		content = lipgloss.JoinVertical(lipgloss.Left, content, lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Render(m.statusMsg))
+		content = lipgloss.JoinVertical(
+			lipgloss.Left,
+			content,
+			lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Render(m.statusMsg),
+		)
 	}
 
 	content += "\n" + SubtleStyle.Render("e: export • q: back")
@@ -145,5 +158,29 @@ func (m DashboardModel) View() string {
 		m.width, m.height,
 		lipgloss.Center, lipgloss.Center,
 		content,
+	)
+}
+
+/* ---------- Empty & Error Views ---------- */
+
+func emptyStateView() string {
+	return lipgloss.Place(
+		60, 10,
+		lipgloss.Center, lipgloss.Center,
+		BoxStyle.Render(
+			"📭 No analysis data available\n\n" +
+				"This repository does not have enough data to generate analysis.\n" +
+				"Try another repository or come back later.",
+		),
+	)
+}
+
+func errorStateView(msg string) string {
+	return lipgloss.Place(
+		60, 10,
+		lipgloss.Center, lipgloss.Center,
+		BoxStyle.Render(
+			"❌ Analysis failed\n\n"+msg+"\n\nPress q to return.",
+		),
 	)
 }
