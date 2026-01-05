@@ -29,26 +29,27 @@ const (
 )
 
 type MainModel struct {
-	state         sessionState
-	menu          MenuModel
-	input         string // Repository input
-	compareInput1 string // First repo for comparison
-	compareInput2 string // Second repo for comparison
-	compareStep   int    // 0 = entering first repo, 1 = entering second repo
-	spinner       spinner.Model
-	dashboard     DashboardModel
-	tree          TreeModel
-	help          help.Model
-	progress      *ProgressTracker
-	err           error
-	windowWidth   int
-	windowHeight  int
-	analysisType  string // quick, detailed, custom
-	appSettings   tea.LogOptionsSetter
-	compareResult *CompareResult // Holds comparison data
-	history       *History       // Analysis history
-	historyCursor int            // Current selection in history
-	helpContent   string         // Content for help screen
+	state          sessionState
+	menu           MenuModel
+	input          string // Repository input
+	compareInput1  string // First repo for comparison
+	compareInput2  string // Second repo for comparison
+	compareStep    int    // 0 = entering first repo, 1 = entering second repo
+	spinner        spinner.Model
+	dashboard      DashboardModel
+	tree           TreeModel
+	help           help.Model
+	progress       *ProgressTracker
+	err            error
+	windowWidth    int
+	windowHeight   int
+	analysisType   string // quick, detailed, custom
+	appSettings    tea.LogOptionsSetter
+	compareResult  *CompareResult // Holds comparison data
+	history        *History       // Analysis history
+	historyCursor  int            // Current selection in history
+	helpContent    string         // Content for help screen
+	settingsOption string         // Selected settings option
 }
 
 func NewMainModel() MainModel {
@@ -154,7 +155,14 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.history = history
 				m.menu.Done = false
 			case 3: // Settings
-				// Settings would open a settings submenu
+				if m.menu.submenuType == "settings" {
+					// Settings option selection
+					settingsOptions := []string{"theme", "export", "token", "reset"}
+					if m.menu.submenuCursor < len(settingsOptions) {
+						m.settingsOption = settingsOptions[m.menu.submenuCursor]
+					}
+					m.state = stateSettings
+				}
 				m.menu.Done = false
 			case 4: // Help
 				if m.menu.submenuType == "help" {
@@ -410,6 +418,15 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+	case stateSettings:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "q", "esc":
+				m.state = stateMenu
+			}
+		}
+
 	case stateDashboard:
 		newDash, newCmd := m.dashboard.Update(msg)
 		m.dashboard = newDash.(DashboardModel)
@@ -495,6 +512,8 @@ func (m MainModel) View() string {
 		return m.tree.View()
 	case stateHelp:
 		return m.helpView()
+	case stateSettings:
+		return m.settingsView()
 	case stateDashboard:
 		return m.dashboard.View()
 	}
@@ -985,6 +1004,100 @@ Select a help topic from the menu above.
 	helpContent := TitleStyle.Render(title) + "\n\n" + content + "\n\n" + SubtleStyle.Render("Press ESC or q to go back")
 
 	box := BoxStyle.Render(helpContent)
+
+	if m.windowWidth == 0 {
+		return box
+	}
+
+	return lipgloss.Place(
+		m.windowWidth, m.windowHeight,
+		lipgloss.Center, lipgloss.Center,
+		box,
+	)
+}
+
+func (m MainModel) settingsView() string {
+	var title string
+	var content string
+
+	switch m.settingsOption {
+	case "theme":
+		title = "🎨 Theme Settings"
+		content = `
+Theme customization options:
+
+Current theme: Default
+
+Available themes:
+  • Default (Dark)
+  • Light
+  • High Contrast
+
+To change theme:
+  1. Edit the theme configuration
+  2. Restart the application
+
+Note: Theme changes require application restart.
+`
+	case "export":
+		title = "📤 Export Options"
+		content = `
+Export formats available:
+
+  • JSON: Structured data export
+  • Markdown: Human-readable reports
+  • PDF: Professional documents
+
+Default export location:
+  ./exports/
+
+To change export settings:
+  1. Modify export configuration
+  2. Set custom export path
+`
+	case "token":
+		title = "🔑 GitHub Token"
+		content = `
+GitHub API Token Configuration:
+
+Current status: Not configured
+
+To set up GitHub token:
+  1. Go to GitHub Settings > Developer settings > Personal access tokens
+  2. Create a new token with repo permissions
+  3. Set GITHUB_TOKEN environment variable
+  4. Restart the application
+
+Benefits:
+  • Higher API rate limits (5000 vs 60 requests/hour)
+  • Access to private repositories
+  • More detailed analysis
+`
+	case "reset":
+		title = "🔄 Reset to Defaults"
+		content = `
+Reset all settings to default values:
+
+This will:
+  • Clear all saved settings
+  • Reset theme to default
+  • Clear export preferences
+  • Remove custom configurations
+
+Warning: This action cannot be undone.
+
+Press 'y' to confirm reset, or ESC to cancel.
+`
+	default:
+		title = "⚙️ Settings"
+		content = `
+Select a settings option from the menu.
+`
+	}
+
+	settingsContent := TitleStyle.Render(title) + "\n\n" + content + "\n\n" + SubtleStyle.Render("Press ESC or q to go back")
+
+	box := BoxStyle.Render(settingsContent)
 
 	if m.windowWidth == 0 {
 		return box
