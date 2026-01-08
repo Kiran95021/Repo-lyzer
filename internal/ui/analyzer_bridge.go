@@ -20,7 +20,7 @@ type AnalyzerDataBridge struct {
 	cache         map[string]interface{}
 }
 
-// NEW: Empty-state detection helper
+// IsEmpty reports whether analysis contains no meaningful data
 func (b *AnalyzerDataBridge) IsEmpty() bool {
 	return b.repo == nil ||
 		(len(b.commits) == 0 &&
@@ -46,10 +46,8 @@ func NewAnalyzerDataBridge(result AnalysisResult) *AnalyzerDataBridge {
 
 	}
 
-	// NEW: Avoid building tree if no commits exist
-	if len(result.Commits) > 0 {
-		bridge.fileTree = BuildFileTree(len(result.Commits), []string{})
-	}
+	// Build a default file tree (safe, no unused params)
+	bridge.fileTree = BuildFileTree()
 
 	return bridge
 }
@@ -173,4 +171,141 @@ func (b *AnalyzerDataBridge) GetCompleteAnalysis() map[string]interface{} {
 // GetFileTree returns the repository file structure
 func (b *AnalyzerDataBridge) GetFileTree() *FileNode {
 	return b.fileTree
+}
+
+/* ---------- Helper Methods (unchanged logic) ---------- */
+
+func (b *AnalyzerDataBridge) getHealthStatus() string {
+	if b.healthScore >= 80 {
+		return "Excellent"
+	} else if b.healthScore >= 60 {
+		return "Good"
+	} else if b.healthScore >= 40 {
+		return "Fair"
+	}
+	return "Poor"
+}
+
+func (b *AnalyzerDataBridge) getHealthColor() string {
+	if b.healthScore >= 80 {
+		return "green"
+	} else if b.healthScore >= 60 {
+		return "yellow"
+	}
+	return "red"
+}
+
+func (b *AnalyzerDataBridge) getRiskColor() string {
+	if b.busFactor >= 7 {
+		return "green"
+	} else if b.busFactor >= 4 {
+		return "yellow"
+	}
+	return "red"
+}
+
+func (b *AnalyzerDataBridge) getTopContributors(count int) []map[string]interface{} {
+	if count > len(b.contributors) {
+		count = len(b.contributors)
+	}
+
+	top := []map[string]interface{}{}
+	for i := 0; i < count; i++ {
+		contrib := b.contributors[i]
+		top = append(top, map[string]interface{}{
+			"login":         contrib.Login,
+			"contributions": contrib.Commits,
+		})
+	}
+	return top
+}
+
+func (b *AnalyzerDataBridge) calculateDiversity() float64 {
+	if len(b.contributors) == 0 {
+		return 0
+	}
+
+	var sum int
+	for _, contrib := range b.contributors {
+		sum += contrib.Commits
+	}
+
+	var diversity float64
+	for _, contrib := range b.contributors {
+		ratio := float64(contrib.Commits) / float64(sum)
+		diversity += ratio * ratio
+	}
+
+	return (1 - diversity) * 100
+}
+
+func (b *AnalyzerDataBridge) getRecentActivity() map[string]int {
+	return map[string]int{}
+}
+
+func (b *AnalyzerDataBridge) calculateCommitFrequency() string {
+	if len(b.commits) == 0 {
+		return "No commits"
+	}
+
+	avgPerDay := float64(len(b.commits)) / 365
+	if avgPerDay >= 10 {
+		return "Very High"
+	} else if avgPerDay >= 5 {
+		return "High"
+	} else if avgPerDay >= 1 {
+		return "Regular"
+	}
+	return "Sporadic"
+}
+
+func (b *AnalyzerDataBridge) getLastCommitInfo() map[string]interface{} {
+	if len(b.commits) == 0 {
+		return map[string]interface{}{}
+	}
+
+	lastCommit := b.commits[len(b.commits)-1]
+	return map[string]interface{}{
+		"sha":    lastCommit.SHA,
+		"author": lastCommit.Commit.Author,
+		"date":   lastCommit.Commit.Author.Date,
+	}
+}
+
+func (b *AnalyzerDataBridge) calculateActivityTrend() string {
+	if len(b.commits) < 2 {
+		return "Unknown"
+	}
+	return "Stable"
+}
+
+func (b *AnalyzerDataBridge) getPrimaryLanguage() string {
+	maxBytes := 0
+	primaryLang := "Unknown"
+	for lang, bytes := range b.languages {
+		if bytes > maxBytes {
+			maxBytes = bytes
+			primaryLang = lang
+		}
+	}
+	return primaryLang
+}
+
+func (b *AnalyzerDataBridge) calculateLanguageDiversity() float64 {
+	if len(b.languages) == 0 {
+		return 0
+	}
+
+	var totalBytes int64
+	for _, bytes := range b.languages {
+		totalBytes += int64(bytes)
+	}
+
+	var diversity float64
+	for _, bytes := range b.languages {
+		ratio := float64(bytes) / float64(totalBytes)
+		diversity += ratio * ratio
+	}
+
+	return (1 - diversity) * 100
 }

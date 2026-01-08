@@ -25,6 +25,7 @@ const (
 )
 
 type DashboardModel struct {
+<<<<<<< HEAD
 	data        AnalysisResult
 	BackToMenu  bool
 	width       int
@@ -33,6 +34,15 @@ type DashboardModel struct {
 	statusMsg   string
 	currentView dashboardView
 	showHelp    bool
+=======
+	data       AnalysisResult
+	err        error // explicit error state
+	BackToMenu bool
+	width      int
+	height     int
+	showExport bool
+	statusMsg  string
+>>>>>>> 552a131 (fix: remove duplicate tree definitions and unused types (#58))
 }
 
 func NewDashboardModel() DashboardModel {
@@ -61,12 +71,19 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case exportMsg:
 		if msg.err != nil {
-			m.statusMsg = fmt.Sprintf("Export failed: %v", msg.err)
+			m.err = msg.err
+			m.statusMsg = msg.err.Error()
 		} else {
 			m.statusMsg = msg.msg
 		}
+<<<<<<< HEAD
  feat/empty-state-error-handling-58
 		return m, tea.Tick(3*time.Second, func(t time.Time) tea.Msg { return "clear_status" })
+=======
+		return m, tea.Tick(3*time.Second, func(t time.Time) tea.Msg {
+			return "clear_status"
+		})
+>>>>>>> 552a131 (fix: remove duplicate tree definitions and unused types (#58))
 
 		return m, tea.Tick(3*time.Second, func(time.Time) tea.Msg {
 			return "clear_status"
@@ -91,26 +108,35 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.BackToMenu = true
 			}
 
+<<<<<<< HEAD
 		case "?", "h":
 			m.showHelp = !m.showHelp
 
+=======
+>>>>>>> 552a131 (fix: remove duplicate tree definitions and unused types (#58))
 		case "e":
 			m.showExport = !m.showExport
 
 		case "j":
 			if m.showExport {
 				return m, func() tea.Msg {
+<<<<<<< HEAD
 					_,err := ExportJSON(m.data, "analysis.json")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
 					return exportMsg{nil, "✓ Exported to analysis.json"}
+=======
+					err := ExportJSON(m.data, "analysis.json")
+					return exportMsg{err: err, msg: "Exported to analysis.json"}
+>>>>>>> 552a131 (fix: remove duplicate tree definitions and unused types (#58))
 				}
 			}
 
 		case "m":
 			if m.showExport {
 				return m, func() tea.Msg {
+<<<<<<< HEAD
 					_,err := ExportMarkdown(m.data, "analysis.md")
 					if err != nil {
 						return exportMsg{err, ""}
@@ -169,6 +195,10 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !m.showHelp && !m.showExport {
 				if m.currentView > viewOverview {
 					m.currentView--
+=======
+					err := ExportMarkdown(m.data, "analysis.md")
+					return exportMsg{err: err, msg: "Exported to analysis.md"}
+>>>>>>> 552a131 (fix: remove duplicate tree definitions and unused types (#58))
 				}
 			}
 		}
@@ -180,26 +210,30 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m DashboardModel) View() string {
  feat/empty-state-error-handling-58
 
-	// ❌ Error state
-	if m.data.Repo == nil && m.statusMsg != "" {
-		return errorStateView(m.statusMsg)
+	// ❌ Error state (explicit)
+	if m.err != nil {
+		return errorStateView(m.err.Error())
 	}
 
-	// 📭 Empty state
-	if m.data.Repo == nil ||
-		(len(m.data.Commits) == 0 &&
-			len(m.data.Contributors) == 0 &&
-			len(m.data.Languages) == 0) {
+	// 📭 Empty state (single source of truth)
+	if m.data.IsEmpty() {
 		return emptyStateView()
 
 	if m.data.Repo == nil {
 		return "No data loaded"
 	}
 
+<<<<<<< HEAD
 	// Show help overlay
 	if m.showHelp {
 		return m.helpView()
 	}
+=======
+	// Header
+	header := TitleStyle.Render(
+		fmt.Sprintf("Analysis for %s", m.data.Repo.FullName),
+	)
+>>>>>>> 552a131 (fix: remove duplicate tree definitions and unused types (#58))
 
 	var content string
 
@@ -292,13 +326,17 @@ feat/empty-state-error-handling-58
 	)
 	metricsBox := BoxStyle.Render(metrics)
 
+<<<<<<< HEAD
  feat/empty-state-error-handling-58
 	// Charts
+=======
+	// Commit activity chart
+>>>>>>> 552a131 (fix: remove duplicate tree definitions and unused types (#58))
 	activityData := analyzer.CommitsPerDay(m.data.Commits)
 	chart := RenderCommitActivity(activityData, 10)
 	chartBox := BoxStyle.Render(chart)
 
-	// File Tree
+	// File tree (safe)
 	treeContent := "📂 Files (Top 10):\n"
 	limit := 10
 	if len(m.data.FileTree) < limit {
@@ -350,6 +388,7 @@ func (m DashboardModel) languagesView() string {
 
 	}
 
+<<<<<<< HEAD
 	// Calculate total bytes
 	total := 0
 	for _, bytes := range m.data.Languages {
@@ -378,6 +417,52 @@ func (m DashboardModel) languagesView() string {
 		}
 		bar := strings.Repeat("█", barLen)
 		lines = append(lines, fmt.Sprintf("%-15s %s %.1f%%", lang.name, bar, pct))
+=======
+	for i := 0; i < limit; i++ {
+		icon := "📄"
+		if m.data.FileTree[i].Type == "dir" {
+			icon = "📁"
+		}
+		treeContent += fmt.Sprintf(
+			"%s %s\n",
+			icon,
+			m.data.FileTree[i].Path,
+		)
+	}
+
+	if len(m.data.FileTree) > limit {
+		treeContent += fmt.Sprintf(
+			"... and %d more",
+			len(m.data.FileTree)-limit,
+		)
+	}
+
+	treeBox := BoxStyle.Render(treeContent)
+
+	// Layout
+	row := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		metricsBox,
+		chartBox,
+	)
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		row,
+		treeBox,
+	)
+
+	if m.showExport {
+		exportMenu := BoxStyle.Render(
+			"Export Options:\n[J] JSON\n[M] Markdown",
+		)
+		content = lipgloss.JoinVertical(
+			lipgloss.Left,
+			content,
+			exportMenu,
+		)
+>>>>>>> 552a131 (fix: remove duplicate tree definitions and unused types (#58))
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(strings.Join(lines, "\n")))
@@ -407,7 +492,9 @@ func (m DashboardModel) contributorsView() string {
 		content = lipgloss.JoinVertical(
 			lipgloss.Left,
 			content,
-			lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Render(m.statusMsg),
+			lipgloss.NewStyle().
+				Foreground(lipgloss.Color("205")).
+				Render(m.statusMsg),
 		)
 
 	var lines []string
@@ -506,7 +593,11 @@ Actions:
 		m.height,
 		lipgloss.Center,
 		lipgloss.Center,
+<<<<<<< HEAD
 		lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(help)),
+=======
+		content,
+>>>>>>> 552a131 (fix: remove duplicate tree definitions and unused types (#58))
 	)
 }
 
@@ -515,20 +606,24 @@ Actions:
 
 func emptyStateView() string {
 	return lipgloss.Place(
-		60, 10,
-		lipgloss.Center, lipgloss.Center,
+		60,
+		10,
+		lipgloss.Center,
+		lipgloss.Center,
 		BoxStyle.Render(
-			"📭 No analysis data available\n\n" +
-				"This repository does not have enough data to generate analysis.\n" +
-				"Try another repository or come back later.",
+			"📭 No analysis data available\n\n"+
+				"This repository does not contain enough data to analyze.\n"+
+				"Try another repository.",
 		),
 	)
 }
 
 func errorStateView(msg string) string {
 	return lipgloss.Place(
-		60, 10,
-		lipgloss.Center, lipgloss.Center,
+		60,
+		10,
+		lipgloss.Center,
+		lipgloss.Center,
 		BoxStyle.Render(
 			"❌ Analysis failed\n\n"+msg+"\n\nPress q to return.",
 		),
